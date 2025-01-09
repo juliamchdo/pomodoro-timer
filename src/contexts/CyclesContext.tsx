@@ -1,13 +1,11 @@
-import { createContext, useState } from "react";
-
-interface Cycle {
-  id: string;
-  task: string;
-  minutesAmount: number;
-  startDate: Date;
-  interruptedDate?: Date;
-  finishedDate?: Date;
-}
+import { createContext, useReducer, useState } from "react";
+import { Cycle, cyclesReducer } from "../cycles/reducer";
+import {
+  ActionType,
+  addNewCycleAction,
+  interruptCurrentCycleAction,
+  markCurrentCycleAsFinishedAction,
+} from "../cycles/actions";
 
 interface CreateCycleData {
   task: string;
@@ -34,20 +32,18 @@ interface CyclesContextProviderProps {
 export function CyclesContextProvider({
   children,
 }: CyclesContextProviderProps) {
-  const [cycles, setCycles] = useState<Cycle[]>([]);
-  const [activeCycleId, setActiveCycleId] = useState<string | null>(null);
+  const [cyclesState, dispatch] = useReducer(cyclesReducer, {
+    cycles: [],
+    activeCycleId: null,
+  });
+
+  const { cycles, activeCycleId } = cyclesState;
+
   const activeCycle = cycles.find((cycle) => cycle.id === activeCycleId);
   const [amountSecondsPassed, setAmountSecondsPassed] = useState(0); // o tanto de segundos que se pasou dede que o ciclo foi criado
 
   function markCurrentCycleAsFinished() {
-    setCycles((state) =>
-      state.map((cycle) => {
-        if (cycle.id === activeCycleId) {
-          return { ...cycle, finishedDate: new Date() };
-        }
-        return cycle;
-      })
-    );
+    dispatch(markCurrentCycleAsFinishedAction());
   }
 
   function handleSecondsPassed(seconds: number) {
@@ -62,22 +58,12 @@ export function CyclesContextProvider({
       startDate: new Date(),
     };
 
-    setCycles((state) => [...state, newCycle]);
-    setActiveCycleId(newCycle.id);
+    dispatch(addNewCycleAction(newCycle));
     setAmountSecondsPassed(0);
   }
 
   function interruptCurrentCycle() {
-    setCycles((state) =>
-      state.map((cycle) => {
-        if (cycle.id === activeCycleId) {
-          return { ...cycle, interruptedDate: new Date() };
-        }
-        return cycle;
-      })
-    );
-
-    setActiveCycleId(null);
+    dispatch(interruptCurrentCycleAction());
   }
 
   return (
